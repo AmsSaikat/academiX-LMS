@@ -109,7 +109,7 @@ export default function Login() {
 
 
           </form>
-
+          <p className="text-center text-gray-500 mt-3">Or continue with</p>
           <SocialNavs/>
         </div>
 

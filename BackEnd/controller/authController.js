@@ -1,5 +1,6 @@
 import User from "../model/userModel.js";
 import crypto from 'crypto'
+import nodemailer from 'nodemailer'
 import validator from "validator";
 import bcrypt from "bcryptjs";
 import { sendTestMail } from "../config/mailer.js";
@@ -111,14 +112,47 @@ export const forgotPassword = async (req, res) => {
     const resetToken = crypto.randomBytes(32).toString("hex");
 
     // Save hashed token in DB
-    user.resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+    user.resetPasswordToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
+
     user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 min
     await user.save();
 
-    // Normally send email, but for now return token
+    // Reset URL (pointing to frontend)
+    const resetURL = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+
+    // Nodemailer Transporter
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS, // Gmail App Password
+      },
+    });
+
+    // Email Template
+    await transporter.sendMail({
+      from: `"My App" <${process.env.MAIL_USER}>`,
+      to: user.email,
+      subject: "Reset Your Password",
+      html: `
+        <h2>Password Reset Request</h2>
+        <p>You requested to reset your password. Click the link below:</p>
+        <a href="${resetURL}" 
+           style="display:inline-block;margin-top:10px;background:#007bff;color:white;padding:10px 15px;text-decoration:none;border-radius:5px;"
+           target="_blank">
+          Reset Password
+        </a>
+        <p style="margin-top:15px;">Or copy this link:</p>
+        <p>${resetURL}</p>
+        <p>This link expires in 15 minutes.</p>
+      `,
+    });
+
     return res.status(200).json({
-      message: "Reset link generated",
-      resetLink: `http://localhost:5173/reset-password/${resetToken}`
+      message: "Password reset link sent to email",
     });
 
   } catch (error) {
@@ -196,5 +230,25 @@ export const mailTester = async (req, res) => {
   } catch (error) {
     console.log("Mail Test Error:", error);
     return res.status(500).json({ message: "Failed to send test email" });
+  }
+};
+
+
+
+
+export const googleAuth = async (req, res) => {
+  try {
+    const { name, email, photoURL } = req.body;
+
+    console.log("Google user:", name, email);
+
+    return res.status(200).json({
+      success: true,
+      message: "Google sign-in successful",
+      user: { name, email, photoURL },
+    });
+  } catch (error) {
+    console.error("Google Auth Error:", error);
+    return res.status(500).json({ error: "Server error" });
   }
 };
