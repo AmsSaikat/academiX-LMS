@@ -1,4 +1,4 @@
-import React from 'react'
+import React from 'react';
 import { FaYoutube, FaFacebook, FaGoogle } from "react-icons/fa";
 
 export default function SocialNavs({ onGoogleClick, googleLoading }) {
@@ -8,7 +8,9 @@ export default function SocialNavs({ onGoogleClick, googleLoading }) {
       {/* GOOGLE */}
       <button
         type="button"
-        onClick={googleLoading ? null : onGoogleClick}
+        onClick={googleLoading ? undefined : onGoogleClick}
+        disabled={googleLoading}
+        aria-label="Sign in with Google"
         className={`transition ${googleLoading ? "opacity-60 cursor-not-allowed" : "hover:text-red-300"}`}
       >
         {googleLoading ? (
@@ -18,14 +20,23 @@ export default function SocialNavs({ onGoogleClick, googleLoading }) {
         )}
       </button>
 
-      <button type="button" className="hover:text-red-600 transition">
+      {/* YOUTUBE */}
+      <button
+        type="button"
+        aria-label="YouTube"
+        className="hover:text-red-600 transition"
+      >
         <FaYoutube />
       </button>
 
-      <button type="button" className="hover:text-blue-600 transition">
+      {/* FACEBOOK */}
+      <button
+        type="button"
+        aria-label="Facebook"
+        className="hover:text-blue-600 transition"
+      >
         <FaFacebook />
       </button>
     </div>
   );
 }
-

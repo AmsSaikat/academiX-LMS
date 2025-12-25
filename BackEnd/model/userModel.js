@@ -30,6 +30,12 @@ const userSchema=new mongoose.Schema({
         type:mongoose.Schema.Types.ObjectId,
         ref:"Course"
     },
+    isEmailVerified:{
+        type:Boolean,
+        default:false
+    },
+    verificationToken: String,
+    verificationTokenExpiry:Date,
     resetPasswordToken: String,
     resetPasswordExpire: Date,
 },{timestamps:true})

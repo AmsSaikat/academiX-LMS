@@ -4,6 +4,9 @@ import nodemailer from 'nodemailer'
 import validator from "validator";
 import bcrypt from "bcryptjs";
 import { sendTestMail } from "../config/mailer.js";
+import { generateCookieToken, generateVerificationToken } from "../utils/generateToken.js";
+import { sendVerificationEmail } from "../utils/sendVerificationEmail.js";
+import { setTokenCookie } from "../utils/setCookieToken.js";
 
 // ---------------------- SIGNUP ----------------------
 export const signup = async (req, res) => {
@@ -21,7 +24,7 @@ export const signup = async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    // Check password length
+    // Validate password length
     if (password.length < 8) {
       return res
         .status(400)
@@ -38,22 +41,40 @@ export const signup = async (req, res) => {
       password: hashedPassword,
       role,
     });
+
+    // Generate email verification token
+    const { verificationToken, expiry } = generateVerificationToken();
+    newUser.verificationToken = verificationToken;
+    newUser.verificationTokenExpiry = expiry;
+
     await newUser.save();
 
-    // Return success
+    // Send verification email
+    await sendVerificationEmail(email, verificationToken);
+
+    // Generate login token (JWT)
+    const token = generateCookieToken(newUser);
+
+    // Set cookie for instant login
+    setTokenCookie(res, token);
+
     return res.status(201).json({
-      message: "User created successfully",
+      message: "User created successfully. Verification email sent.",
       user: {
         id: newUser._id,
-        name:newUser.name,
+        name: newUser.name,
         email: newUser.email,
         role: newUser.role,
       },
     });
+
   } catch (error) {
+    console.error("Signup error:", error);
     return res.status(500).json({ message: `Signup error: ${error.message}` });
   }
 };
+
+
 
 // ---------------------- LOGIN ----------------------
 export const login = async (req, res) => {
@@ -66,13 +87,24 @@ export const login = async (req, res) => {
       return res.status(404).json({ message: "User does not exist" });
     }
 
+    // Email verified check
+    if (!user.isEmailVerified) {
+      return res.status(400).json({ message: "Email is yet to be verified" });
+    }
+
     // Compare password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: "Wrong password" });
     }
 
-    // Return success (no token, no cookies)
+    // Generate login token (JWT)
+    const token = generateCookieToken(user);
+
+    // Set cookie for instant login
+    setTokenCookie(res, token);
+
+    // Response
     return res.status(200).json({
       message: "Login successful",
       user: {
@@ -80,8 +112,10 @@ export const login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        isEmailVerified: user.isEmailVerified,
       },
     });
+
   } catch (error) {
     return res.status(500).json({ message: `Login error: ${error.message}` });
   }
@@ -90,10 +124,18 @@ export const login = async (req, res) => {
 
 
 // ---------------------- LOGOUT ----------------------
-export const logout = async (req, res) => {
-  // Logout is just a frontend action (remove user from localStorage)
-  return res.status(200).json({ message: "Logout successful" });
+export const logout = (req, res) => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: false, // set true in production (HTTPS)
+    sameSite: "lax",
+  });
+
+  return res.status(200).json({
+    message: "Logout successful",
+  });
 };
+
 
 
 
@@ -235,7 +277,7 @@ export const mailTester = async (req, res) => {
 
 
 
-
+// ---------------------- GOOGLE-AUTHENTICATION  ----------------------
 export const googleAuth = async (req, res) => {
   try {
     const { name, email, photoURL } = req.body;
@@ -252,3 +294,100 @@ export const googleAuth = async (req, res) => {
     return res.status(500).json({ error: "Server error" });
   }
 };
+
+
+
+// ---------------------- EMAIL-VERIFICATION  ----------------------
+export const verifyEmail = async (req, res) => {
+  try {
+    // Extract code from body
+    const { token } = req.params;
+
+    if (!token) {
+      return res.status(400).json({ message: "Verification code is required" });
+    }
+
+    // Find user with matching verification token
+    const user = await User.findOne({ verificationToken: token });
+
+    if (!user) {
+      return res.status(404).json({ message: "Invalid token" });
+    }
+
+    // Check token expiration
+    if (user.verificationTokenExpiry < Date.now()) {
+      return res.status(400).json({ message: "Expired token" });
+    }
+
+    // Update verification status
+    user.isEmailVerified = true;
+    user.verificationToken = undefined;
+    user.verificationTokenExpiry = undefined;
+
+    await user.save();
+
+    // Successful response
+    res.status(200).json({
+      message: "Email verified successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        verified: user.isEmailVerified,
+      },
+    });
+
+  } catch (error) {
+    console.error("Error verifying email:", error);
+    res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
+  }
+};
+
+
+
+// ---------------------- RESEND VERIFICATION EMAIL ----------------------
+export const resendVerificationEmail = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    // Check user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // If already verified
+    if (user.isVerified) {
+      return res.status(400).json({ message: "Email already verified" });
+    }
+
+    // Generate new token
+    const {verificationToken,expiry} = await generateVerificationToken();
+
+    // Save token in DB (optional)
+    user.verificationToken = verificationToken;
+    user.verificationTokenExpiry = expiry
+    await user.save();
+
+    // Send email
+    await sendVerificationEmail(email, verificationToken);
+
+    return res.status(200).json({
+      message: "Verification email resent successfully!",
+    });
+
+  } catch (error) {
+    console.error("Resend email error:", error);
+    return res.status(500).json({ message: "Failed to resend verification email" });
+  }
+};
+
+
+

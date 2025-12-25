@@ -1,38 +1,40 @@
 import React, { useState } from "react";
-import SocialNavs from '../components/SocialNavs'
+import SocialNavs from '../components/SocialNavs';
 import axios from "axios";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { FaRegEyeSlash } from "react-icons/fa";
 import { IoEyeOutline } from "react-icons/io5";
+import { useDispatch } from "react-redux";
+import { setUserdata } from "../redux/userSlice";
 
 export default function Login() {
   const [showPass, setShowPass] = useState(false);
-  const { register, handleSubmit, formState: { errors }, reset } = useForm();
+  const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { register, handleSubmit, formState: { errors }, reset } = useForm();
 
   const handlePass = () => setShowPass((prev) => !prev);
 
   const loginChecker = async (data) => {
     try {
-      // ✅ Send login request
+      setLoading(true);
       const res = await axios.post(
         "http://localhost:5000/api/auth/login",
-        data
+        data,
+        { withCredentials: true } // Important if using cookies
       );
 
-      // ✅ Show success toast
+      dispatch(setUserdata(res.data.user)); // Store user in Redux
       toast.success(res.data.message || "Login successful");
-
-      // ✅ Store user in localStorage
-      localStorage.setItem("user", JSON.stringify(res.data.user));
-
-      // ✅ Redirect to homepage
-      navigate("/");
       reset();
+      navigate("/"); // Redirect to homepage
     } catch (error) {
       toast.error(error.response?.data?.message || "Login failed");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -94,23 +96,33 @@ export default function Login() {
 
               <button
                 type="submit"
-                className="w-full bg-black text-white py-2 rounded-md mt-3 hover:bg-gray-900 transition"
+                disabled={loading}
+                className="w-full bg-black text-white py-2 rounded-md mt-3 hover:bg-gray-900 transition flex justify-center items-center"
               >
-                Login
+                {loading ? (
+                  <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                ) : (
+                  "Login"
+                )}
               </button>
 
-            <div>
-              <p>Forgot your <span className="underline text-red-400 cursor-pointer" onClick={()=>navigate(
-                "/forgot-password"
-              )}>password</span>?</p>
-            </div>
-
+              <div>
+                <p>
+                  Forgot your{" "}
+                  <span
+                    className="underline text-red-400 cursor-pointer"
+                    onClick={() => navigate("/forgot-password")}
+                  >
+                    password
+                  </span>
+                  ?
+                </p>
+              </div>
             </fieldset>
-
-
           </form>
+
           <p className="text-center text-gray-500 mt-3">Or continue with</p>
-          <SocialNavs/>
+          <SocialNavs />
         </div>
 
         {/* Right Section (Register Prompt) */}
@@ -124,12 +136,12 @@ export default function Login() {
           <p className="text-gray-300 text-[15px]">
             Create an account to access personalized courses and content.
           </p>
-          <Link
-            to="/signup"
+          <button
+            onClick={() => navigate("/signup")}
             className="mt-3 px-6 py-2 border border-white rounded-md hover:bg-white hover:text-black transition font-medium"
           >
             Sign Up
-          </Link>
+          </button>
         </div>
       </div>
     </div>
