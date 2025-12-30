@@ -22,6 +22,8 @@ import CreateCourses from "./pages/educator/CreateCourses";
 import useGetCurrentUser from "./customHooks/getCurrentUser";
 import getCreatorCourse from "./customHooks/getCreatorCourse";
 import AllCourses from "./pages/AllCourses";
+import CreateLecture from "./pages/educator/Createlecture";
+import EditLecture from "./pages/educator/EditLecture";
 
 export default function App() {
   const { loading } = useGetCurrentUser(); // fixed: now loading comes from hook
@@ -46,43 +48,15 @@ export default function App() {
         <Route path="/verify-email/:token" element={<VerifyEmailCallback />} />
 
         {/* Protected Routes */}
-        <Route
-          path="/edit-profile"
-          element={
-             userData ? <EditProfile /> : <Navigate to={"/signup"} />
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-             userData ? <MyProfile /> : <Navigate to={"/signup"} />
-          }
-        />
+        <Route path="/edit-profile" element={userData ? <EditProfile /> : <Navigate to={"/signup"} />} />
+        <Route path="/profile" element={userData ? <MyProfile /> : <Navigate to={"/signup"} /> } />
         
-        <Route
-          path="/dashboard"
-          element={
-            userData?.role === "teacher" ? <DashBoard /> : <Navigate to={"/signup"} />
-          }
-        />
-        <Route
-          path="/courses"
-          element={
-            userData?.role === "teacher" ? <Courses /> : <Navigate to={"/signup"} />
-          }
-        />
-        <Route
-          path="/createcourse"
-          element={
-            userData?.role === "teacher" ? <CreateCourses /> : <Navigate to={"/signup"} />
-          }
-        />
-        <Route
-          path="/editcourse/:courseId"
-          element={
-            userData?.role === "teacher" ? <EditCourse /> : <Navigate to={"/signup"} />
-          }
-        />
+        <Route path="/dashboard" element={ userData?.role === "teacher" ? <DashBoard /> : <Navigate to={"/signup"} />}/>
+        <Route path="/courses" element={userData?.role === "teacher" ? <Courses /> : <Navigate to={"/signup"} />}/>
+        <Route path="/createcourse" element={userData?.role === "teacher" ? <CreateCourses /> : <Navigate to={"/signup"} />}/>
+        <Route path="/editcourse/:courseId" element={userData?.role === "teacher" ? <EditCourse /> : <Navigate to={"/signup"} />}/>
+        <Route path="/createlecture/:courseId" element={userData?.role === "teacher" ? <CreateLecture /> : <Navigate to={"/signup"} />}/>
+        <Route path="/editlecture/:courseId/:lectureId" element={userData?.role === "teacher" ? <EditLecture /> : <Navigate to={"/signup"} />}/>
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

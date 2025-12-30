@@ -1,5 +1,6 @@
 import Course from "../model/courseModel.js"
 import uploadOnCloudinary from "../config/cloudinary.js"
+import Lecture from "../model/lectureModel.js"
 
 export const createCourse= async (req,res)=>{
     try {
@@ -111,6 +112,8 @@ console.log("BODY:", req.body);
 
 
 
+
+
 export const getCourseById=async(req,res)=>{
     try {
         const {courseId}=req.params
@@ -126,6 +129,9 @@ export const getCourseById=async(req,res)=>{
          return res.status(500).json({message:`getCourseById error ${error}`})
     }
 }
+
+
+
 export const removeCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
@@ -144,5 +150,134 @@ export const removeCourse = async (req, res) => {
     return res
       .status(500)
       .json({ message: "removeCourse error", error: error.message });
+  }
+};
+
+
+
+export const createLecture = async (req, res) => {
+  try {
+    const { lectureTitle } = req.body;
+    const { courseId } = req.params;
+
+    if (!lectureTitle || lectureTitle.trim() === "") {
+      return res.status(400).json({ message: "Lecture title is required" });
+    }
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    // Create lecture
+    const lecture = await Lecture.create({ lectureTitle });
+
+    // Push lecture into course
+    course.lectures.push(lecture._id);
+    await course.save();
+
+    // Optionally populate lectures if you want to return them
+    await course.populate("lectures");
+
+    return res.status(201).json({ lecture, lectures: course.lectures });
+  } catch (error) {
+    console.error("createLecture error:", error);
+    return res.status(500).json({ message: "createLecture error", error: error.message });
+  }
+};
+
+export const getCourseLecture = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const course = await Course.findById(courseId).populate("lectures");
+
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    return res.status(200).json({ lectures: course.lectures });
+  } catch (error) {
+    console.error("getCourseLecture error:", error);
+    return res.status(500).json({ message: "getCourseLecture error", error: error.message });
+  }
+};
+
+
+
+export const getLectureById = async (req, res) => {
+  try {
+    const { lectureId } = req.params;
+    const lecture = await Lecture.findById(lectureId);
+
+    if (!lecture) {
+      return res.status(404).json({ message: "Lecture not found" });
+    }
+
+    return res.status(200).json({ lecture });
+  } catch (error) {
+    console.error("getLectureById error:", error);
+    return res.status(500).json({ message: "getLectureById error", error: error.message });
+  }
+};
+
+
+export const editLecture = async (req, res) => {
+  try {
+    const { lectureId } = req.params;
+    const { isPreviewFree, lectureTitle } = req.body;
+
+    const lecture = await Lecture.findById(lectureId);
+    if (!lecture) {
+      return res.status(404).json({ message: "Lecture not found" });
+    }
+
+    if (req.file) {
+      const videoUrl = await uploadOnCloudinary(req.file.path);
+      lecture.videoUrl = videoUrl;
+    }
+
+    if (lectureTitle) lecture.lectureTitle = lectureTitle;
+    if (typeof isPreviewFree !== "undefined") {
+      lecture.isPreviewFree = isPreviewFree === "true" || isPreviewFree === true;
+    }
+
+    await lecture.save();
+    return res.status(200).json({ lecture });
+  } catch (error) {
+    console.error("editLecture error:", error);
+    return res.status(500).json({ message: "editLecture error", error: error.message });
+  }
+};
+
+
+
+
+import mongoose from "mongoose";
+
+export const removeLecture = async (req, res) => {
+  try {
+    const { lectureId } = req.params;
+
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(lectureId)) {
+      return res.status(400).json({ message: "Invalid lecture ID" });
+    }
+
+    // Delete the lecture document
+    const lecture = await Lecture.findByIdAndDelete(lectureId);
+    if (!lecture) {
+      return res.status(404).json({ message: "Lecture not found" });
+    }
+
+    // Remove reference from any course that contains this lecture
+    await Course.updateMany(
+      { lectures: lectureId },
+      { $pull: { lectures: lectureId } }
+    );
+
+    return res.status(200).json({ message: "Lecture removed successfully" });
+  } catch (error) {
+    console.error("removeLecture error:", error);
+    return res.status(500).json({ message: "removeLecture error", error: error.message });
   }
 };

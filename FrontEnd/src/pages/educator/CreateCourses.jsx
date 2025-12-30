@@ -4,13 +4,12 @@ import toast from 'react-hot-toast'
 import { FaArrowLeftLong } from 'react-icons/fa6'
 import { useNavigate } from 'react-router-dom'
 import ClipLoader from 'react-spinners/ClipLoader'
+import { serverUrl } from '../config/config'
 
 export default function CreateCourses() {
     const [title,setTitle]=useState("")
     const [category,setCategory]=useState("")
     const [loading,setLoading]=useState(false)
-
-    const serverUrl = import.meta.env.VITE_SERVER_URL;
 
     const handleCreateCourse= async ()=>{
         setLoading(true)

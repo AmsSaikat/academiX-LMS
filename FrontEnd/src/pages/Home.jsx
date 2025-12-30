@@ -4,9 +4,11 @@ import Navbar from "./Navbar";
 import HeroLogos from "../components/HeroLogos";
 import ExploreCourses from "./ExploreCourses";
 import CardPage from "../components/CardPage";
+import { useNavigate } from "react-router-dom";
 
 export default function Home() {
   const { userData: user } = useSelector((state) => state.user);
+  const navigate=useNavigate()
 
   return (
     <>

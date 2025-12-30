@@ -8,8 +8,10 @@ import { AiFillOpenAI } from "react-icons/ai";
 import { SiGoogledataproc } from "react-icons/si";
 import { BsClipboard2Data } from "react-icons/bs";
 import { SiOpenaigym } from "react-icons/si";
+import { useNavigate } from 'react-router-dom';
 
 export default function ExploreCourses() {
+    const navigate=useNavigate()
   return (
     <div className='w-[100cw] min-h-[50vw] lg:h-[50vw] flex flex-col lg:flex-row
     items-center justify-center gap-4 px-[30px]'>
@@ -27,7 +29,7 @@ export default function ExploreCourses() {
               dicta optio temporibus impedit modi.
         </p>
 
-        <button className='px-[20px] py-[10px] border-2 bg-black
+        <button onClick={()=>navigate('/all-courses')} className='px-[20px] py-[10px] border-2 bg-black
         border-white text-white rounded-[10px] text-[18px]
         font-light flex gap-2 mt-[40px] cursor-pointer'>
             Explore courses <SiViaplay className="w-[30px] h-[30px] lg:fill-white

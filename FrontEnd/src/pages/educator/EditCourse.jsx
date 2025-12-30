@@ -7,6 +7,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import ClipLoader from "react-spinners/ClipLoader";
 import { setCourseData } from "../../redux/courseSlice";
 import { FaEdit } from "react-icons/fa";
+import { serverUrl } from '../config/config'
 
 export default function EditCourse() {
   const [selectCourse, setSelectCourse] = useState(null);
@@ -27,8 +28,6 @@ export default function EditCourse() {
   const [loading, setLoading] = useState(false);
   const [loading2, setLoading2] = useState(false);
 
-  const serverUrl = import.meta.env.VITE_SERVER_URL;
-
 
   const dispatch = useDispatch();
   const { courseData } = useSelector((state) => state.course);
@@ -43,8 +42,7 @@ export default function EditCourse() {
 
   const getCourseById = async () => {
     try {
-      const result = await axios.get(
-        `${serverUrl}/api/course/getcourse/${courseId}`,
+      const result = await axios.get(`${serverUrl}/api/course/getcourse/${courseId}`,
         { withCredentials: true }
       );
       setSelectCourse(result.data);
@@ -148,7 +146,7 @@ if (updateData.isPublished) {
           Add detailed information regarding the course
         </h2>
         <div className="space-x-2 space-y-2">
-          <button className="bg-black text-white px-4 py-2 rounded-md">
+          <button onClick={()=>navigate(`/createlecture/${selectCourse?._id}`)} className="bg-black text-white px-4 py-2 rounded-md">
             Go to lectures
           </button>
         </div>
