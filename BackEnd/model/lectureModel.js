@@ -9,7 +9,8 @@ const lectureSchema=new mongoose.Schema({
         type:String
     },
     isPreviewFree:{
-        type:Boolean
+        type:Boolean,
+        default:false
     }
 },{timestamps:true})
 

@@ -24,6 +24,8 @@ import getCreatorCourse from "./customHooks/getCreatorCourse";
 import AllCourses from "./pages/AllCourses";
 import CreateLecture from "./pages/educator/Createlecture";
 import EditLecture from "./pages/educator/EditLecture";
+import ViewCourses from "./pages/ViewCourses";
+import ScrollToTop from "./components/ScrollToTop";
 
 export default function App() {
   const { loading } = useGetCurrentUser(); // fixed: now loading comes from hook
@@ -36,6 +38,7 @@ export default function App() {
   return (
     <>
       <Toaster />
+      <ScrollToTop />
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Home />} />
@@ -57,6 +60,7 @@ export default function App() {
         <Route path="/editcourse/:courseId" element={userData?.role === "teacher" ? <EditCourse /> : <Navigate to={"/signup"} />}/>
         <Route path="/createlecture/:courseId" element={userData?.role === "teacher" ? <CreateLecture /> : <Navigate to={"/signup"} />}/>
         <Route path="/editlecture/:courseId/:lectureId" element={userData?.role === "teacher" ? <EditLecture /> : <Navigate to={"/signup"} />}/>
+        <Route path="/viewcourse/:courseId" element={ userData?.role === "teacher" ? <ViewCourses /> : <Navigate to={"/signup"} />}/>
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

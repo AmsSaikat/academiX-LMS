@@ -39,7 +39,7 @@ export default function AllCourses() {
   const categories = [
     'App Development',
     'Web Development',
-    'AI/ML Development',
+    'AI/ML',
     'Data Science',
     'AI Tools',
     'Data Analytics',

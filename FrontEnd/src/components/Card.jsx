@@ -1,9 +1,11 @@
 import React from 'react'
 import { FaStar } from 'react-icons/fa'
+import { useNavigate } from 'react-router-dom'
 
 export default function Card({thumbnail,title,category,price,id}) {
+  const navigate=useNavigate()
   return (
-    <div className='transition-all duration-300 border border-gray-300 max-w-sm w-full bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-lg'>
+    <div onClick={()=>navigate(`/viewcourse/${id}`)} className='transition-all duration-300 border border-gray-300 max-w-sm w-full bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-lg'>
        <img src={thumbnail} className='w-full h-48 object-cover' alt="" />
 
        <div className='p-5 space-y-2'>

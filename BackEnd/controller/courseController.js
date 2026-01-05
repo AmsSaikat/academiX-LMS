@@ -1,6 +1,7 @@
 import Course from "../model/courseModel.js"
 import uploadOnCloudinary from "../config/cloudinary.js"
 import Lecture from "../model/lectureModel.js"
+import User from "../model/userModel.js"
 
 export const createCourse= async (req,res)=>{
     try {
@@ -23,11 +24,13 @@ export const createCourse= async (req,res)=>{
 
 export const getPublishedCourses=async(req,res)=>{
     try {
-        const courses=await Course.find({isPublished:true})
+        const courses=await Course.find({isPublished:true}).populate("lectures")
 
         if(!courses){
             return res.status(400).json({message:"Courses not found(published yet)"})
         }
+
+         return res.status(200).json(courses)
     } catch (error) {
         return res.status(500).json({message:`getPublishedCourses error ${error}`})
     }
@@ -39,14 +42,13 @@ export const getCreatorCourses = async (req, res) => {
   try {
     const userId = req.userId;
 
-    // Find all courses created by this user
-    const courses = await Course.find({ creator: userId });
+    // Populate lectures so videoUrl is available
+    const courses = await Course.find({ creator: userId }).populate("lectures");
 
     if (!courses || courses.length === 0) {
       return res.status(404).json({ message: "No courses found for this creator" });
     }
 
-    // Success: return the courses
     return res.status(200).json(courses);
   } catch (error) {
     return res.status(500).json({ message: `getCreatorCourses error: ${error.message}` });
@@ -117,7 +119,8 @@ console.log("BODY:", req.body);
 export const getCourseById=async(req,res)=>{
     try {
         const {courseId}=req.params
-        const course=await Course.findById(courseId)
+        const course = await Course.findById(courseId).populate("lectures")
+
 
         if(!course){
             return res.status(500).json({message:"Unable to find the course"})
@@ -252,8 +255,6 @@ export const editLecture = async (req, res) => {
 
 
 
-import mongoose from "mongoose";
-
 export const removeLecture = async (req, res) => {
   try {
     const { lectureId } = req.params;
@@ -281,3 +282,21 @@ export const removeLecture = async (req, res) => {
     return res.status(500).json({ message: "removeLecture error", error: error.message });
   }
 };
+
+
+
+export const getCreatorById=async (req,res)=>{
+  try {
+    const {userId}=req.body
+    const user=await User.findById(userId).select("-password")
+
+    if(!user){
+      return res.status(404).json({message:"User not found"})
+    }
+
+    return res.status(200).json(user)
+  } catch (error) {
+      console.error("getCreatorById error:", error);
+      return res.status(500).json({ message: "getCreatorById error", error: error.message });
+  }
+}
