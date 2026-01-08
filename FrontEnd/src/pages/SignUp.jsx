@@ -171,7 +171,7 @@ export default function SignUp() {
 
         {/* Right Section: Illustration */}
         <div className="hidden md:flex w-full md:w-1/2 bg-gradient-to-br from-black via-gray-900 to-gray-800 text-white flex-col justify-center items-center p-10 text-center space-y-4">
-          <img src="/logo.jpg" alt="logo" className="w-28 mb-3 rounded-full shadow-lg" />
+          <img src="/lms-logo.jpg" alt="logo" className="w-28 mb-3 rounded-full shadow-lg" />
           <h2 className="text-3xl font-bold">Welcome to LMS</h2>
           <p className="text-gray-300 text-[15px]">Create an account to access personalized courses and content.</p>
         </div>

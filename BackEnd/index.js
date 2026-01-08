@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";   // FIX 1
 import authRoute from "./route/authRoute.js";
 import userRoute from "./route/userRoute.js";
 import courseRouter from "./route/courseRoute.js";
+import reviewRouter from "./route/reviewRoute.js";
 
 dotenv.config();
 
@@ -35,6 +36,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoute);
 app.use("/api/user", userRoute);
 app.use("/api/course", courseRouter);
+app.use("/api/review",reviewRouter)
 
 // Start server
 const PORT = process.env.PORT || 5000;

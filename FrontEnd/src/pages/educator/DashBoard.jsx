@@ -2,12 +2,13 @@ import React from 'react'
 import { FaArrowLeftLong } from 'react-icons/fa6'
 import { useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
+import CourseGraph from '../../components/CourseGraph'
 
 export default function DashBoard() {
   const navigate =useNavigate()
   const {userData}=useSelector(state=>state.user)
   return (
-    <div className='flex min-h-screen bg-gray-100'>
+    <div className='flex min-h-screen items-center bg-gray-100'>
       <div className='w-full space-y-10 px-6 py-10 bg-gray-50'>
 
         <FaArrowLeftLong
@@ -40,7 +41,9 @@ export default function DashBoard() {
         </div>
 
         {/*Graph section*/}
-        <div></div>
+        <div className='pl-20 pr-20 w-full h-full  bg-gray-100 mt-20'>
+          <CourseGraph />
+        </div>
       </div>
     </div>
   )

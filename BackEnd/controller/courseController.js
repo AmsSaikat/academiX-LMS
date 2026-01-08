@@ -300,3 +300,66 @@ export const getCreatorById=async (req,res)=>{
       return res.status(500).json({ message: "getCreatorById error", error: error.message });
   }
 }
+
+
+
+
+
+// Enroll a student in a course (no payment)
+
+export const enrollCourse = async (req, res) => {
+  try {
+    const courseId = req.params.courseId;
+    const userId = req.userId; // from isAuth middleware
+
+    if (!userId) {
+      return res.status(401).json({ message: "User not logged in" });
+    }
+
+    const course = await Course.findById(courseId);
+
+    if (!course) return res.status(404).json({ message: "Course not found" });
+
+    // Already enrolled?
+    if (course.enrolledStudents.includes(userId)) {
+      return res.status(400).json({ message: "Already enrolled" });
+    }
+
+    course.enrolledStudents.push(userId);
+    await course.save();
+
+    res.status(200).json({ success: true, message: "Enrolled successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Enrollment failed" });
+  }
+};
+
+
+
+
+
+
+export const getAdminCourseAnalytics = async (req, res) => {
+  try {
+    const creatorId = req.userId; // from isAuth middleware
+
+    const courses = await Course.find({ creator: creatorId })
+      .select("title lectures enrolledStudents");
+
+    const analytics = courses.map(course => ({
+      courseId: course._id,
+      title: course.title,
+      lectureCount: course.lectures.length,
+      enrolledCount: course.enrolledStudents.length
+    }));
+
+    return res.status(200).json(analytics);
+  } catch (error) {
+    console.error("Admin analytics error:", error);
+    return res.status(500).json({
+      message: "Failed to load course analytics",
+      error: error.message
+    });
+  }
+};

@@ -1,79 +1,132 @@
-import React, { useEffect, useState } from 'react'
-import { FaArrowLeftLong, FaLock, FaStar,} from 'react-icons/fa6'
-import { useNavigate, useParams } from 'react-router-dom'
-import axios from 'axios'
+import React, { useEffect, useState } from "react";
+import { FaArrowLeftLong, FaStar } from "react-icons/fa6";
+import { useNavigate, useParams } from "react-router-dom";
+import axios from "axios";
+import { useSelector } from "react-redux";
 
-import { serverUrl } from './config/config'
-import Card from '../components/Card'
-import { FaPlayCircle } from 'react-icons/fa'
+import { serverUrl } from "./config/config";
+import Card from "../components/Card";
 
 export default function ViewCourses() {
-  const navigate = useNavigate()
-  const {courseId } = useParams()
+  const navigate = useNavigate();
+  const { courseId } = useParams();
 
-  const [course, setCourse] = useState(null)
-  const [creator, setCreator] = useState(null)
-  const [otherCourses, setOtherCourses] = useState([])
-  const [selectedLecture, setSelectedLecture] = useState(null)
+  const currentUser = useSelector((state) => state.user);
+
+  const [course, setCourse] = useState(null);
+  const [creator, setCreator] = useState(null);
+  const [otherCourses, setOtherCourses] = useState([]);
+  const [isEnrolled, setIsEnrolled] = useState(false);
+  const [loadingEnroll, setLoadingEnroll] = useState(false);
 
   // ===============================
-  // FETCH SELECTED COURSE
+  // FETCH COURSE
   // ===============================
   useEffect(() => {
     const fetchCourse = async () => {
       try {
         const res = await axios.get(`${serverUrl}/api/course/getcourse/${courseId}`, {
           withCredentials: true,
-        })
-        setCourse(res.data)
-      } catch (err) {
-        console.error("Error fetching course:", err)
-      }
-    }
+        });
+        setCourse(res.data);
 
-    fetchCourse()
-  }, [courseId])
+        // ✅ Check enrollment for students
+        if (
+          currentUser?.role === "student" &&
+          res.data.enrolledStudents.includes(currentUser._id)
+        ) {
+          setIsEnrolled(true);
+        } else {
+          setIsEnrolled(false);
+        }
+      } catch (err) {
+        console.error("Error fetching course:", err);
+      }
+    };
+    fetchCourse();
+  }, [courseId, currentUser]);
 
   // ===============================
   // FETCH CREATOR INFO
   // ===============================
   useEffect(() => {
     const fetchCreator = async () => {
-      if (!course?.creator) return
+      if (!course?.creator) return;
       try {
-        const res = await axios.post(`${serverUrl}/api/course/creator`, {
-          userId: course.creator,
-        }, { withCredentials: true })
-        setCreator(res.data)
+        const res = await axios.post(
+          `${serverUrl}/api/course/creator`,
+          { userId: course.creator },
+          { withCredentials: true }
+        );
+        setCreator(res.data);
       } catch (err) {
-        console.error("Error fetching creator:", err)
+        console.error("Error fetching creator:", err);
       }
-    }
-
-    fetchCreator()
-  }, [course])
+    };
+    fetchCreator();
+  }, [course]);
 
   // ===============================
   // FETCH OTHER COURSES BY CREATOR
   // ===============================
   useEffect(() => {
     const fetchOtherCourses = async () => {
-      if (!creator?._id) return
+      if (!creator?._id) return;
       try {
         const res = await axios.get(`${serverUrl}/api/course/getcreator`, {
           withCredentials: true,
-        })
-        const courses = res.data.filter(c => c._id !== courseId)
-        setOtherCourses(courses)
+        });
+        const courses = res.data.filter((c) => c._id !== courseId);
+        setOtherCourses(courses);
       } catch (err) {
-        console.error("Error fetching other courses:", err)
+        console.error("Error fetching other courses:", err);
       }
+    };
+    fetchOtherCourses();
+  }, [creator, courseId]);
+
+  // ===============================
+  // ENROLL HANDLER (students only)
+  // ===============================
+  const handleEnroll = async () => {
+    if (!currentUser) {
+      alert("Please login first.");
+      return;
     }
 
-    fetchOtherCourses()
-  }, [creator, courseId])
+    if (isEnrolled) {
+      navigate(`/viewlecture/${course._id}`);
+      return;
+    }
 
-  if (!course) return <div className="p-6">Loading course...</div>
+    try {
+      setLoadingEnroll(true);
+      const res = await axios.post(
+        `${serverUrl}/api/course/enroll/${course._id}`,
+        {},
+        { withCredentials: true }
+      );
+
+      if (res.data.success) {
+        setIsEnrolled(true);
+        navigate(`/viewlecture/${course._id}`);
+      }
+    } catch (err) {
+      console.error(err.response?.data || err);
+
+      // ✅ Graceful fallback if backend says "Already enrolled"
+      if (err.response?.data?.message === "Already enrolled") {
+        setIsEnrolled(true);
+        navigate(`/viewlecture/${course._id}`);
+      } else {
+        alert(err.response?.data?.message || "Enrollment failed");
+      }
+    } finally {
+      setLoadingEnroll(false);
+    }
+  };
+
+  if (!course) return <div className="p-6">Loading course...</div>;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -82,7 +135,7 @@ export default function ViewCourses() {
         {/* BACK BUTTON */}
         <FaArrowLeftLong
           className="absolute top-3 left-4 w-6 h-6 cursor-pointer"
-          onClick={() => navigate('/all-courses')}
+          onClick={() => navigate("/all-courses")}
         />
 
         {/* COURSE HEADER */}
@@ -116,61 +169,41 @@ export default function ViewCourses() {
             </div>
 
             <ul className="text-sm text-gray-700 space-y-1 pt-2">
-              <li>✅ 10+ hours of video content</li>
+              <li>✅ {course.lectures?.length || 0} Lectures</li>
               <li>✅ Lifetime access to course materials</li>
             </ul>
 
-            <button className="bg-black text-white px-6 py-2 rounded hover:bg-gray-800">
-              Enroll Now
-            </button>
-          </div>
-        </div>
-
-        {/* CURRICULUM + VIDEO PLAYER */}
-        <div className="flex flex-col md:flex-row gap-6">
-
-          {/* LECTURE LIST */}
-          <div className="w-full md:w-2/5 p-6 rounded-2xl shadow-lg border">
-            <h2 className="text-xl font-bold mb-2">Course Curriculum</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              {course.lectures?.length || 0} Lectures
-            </p>
-
-            <div className="flex flex-col gap-3">
-              {course.lectures?.map(lecture => (
+            {/* ✅ Role-based Button */}
+            {currentUser?.role === "teacher" ? (
+              course.creator === currentUser._id ? (
                 <button
-                  key={lecture._id}
-                  disabled={!lecture.isPreviewFree}
-                  onClick={() => lecture.isPreviewFree && setSelectedLecture(lecture)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition
-                    ${lecture.isPreviewFree
-                      ? 'hover:bg-gray-100 cursor-pointer'
-                      : 'opacity-50 cursor-not-allowed'}
-                    ${selectedLecture?._id === lecture._id
-                      ? 'bg-gray-100 border-gray-400'
-                      : 'border-gray-200'}
-                  `}
+                  onClick={() => navigate(`/viewlecture/${course._id}`)}
+                  className="px-6 py-2 rounded text-white bg-black hover:bg-gray-800"
                 >
-                  {lecture.isPreviewFree ? <FaPlayCircle /> : <FaLock />}
-                  <span className="text-sm font-medium">{lecture.lectureTitle}</span>
+                  See Course
                 </button>
-              ))}
-            </div>
-          </div>
-
-          {/* VIDEO PLAYER */}
-          <div className="w-full md:w-3/5 p-6 rounded-2xl shadow-lg border">
-            <div className="aspect-video bg-black rounded-lg flex items-center justify-center">
-              {selectedLecture?.videoUrl ? (
-                <video
-                  controls
-                  className="w-full h-full object-cover"
-                  src={selectedLecture.videoUrl}
-                />
               ) : (
-                <span className="text-white">Select a preview lecture to watch</span>
-              )}
-            </div>
+                <p className="text-gray-500 italic">
+                  Only the creator can view this course.
+                </p>
+              )
+            ) : (
+              <button
+                onClick={handleEnroll}
+                disabled={loadingEnroll}
+                className={`px-6 py-2 rounded text-white ${
+                  loadingEnroll
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-black hover:bg-gray-800"
+                }`}
+              >
+                {loadingEnroll
+                  ? "Enrolling..."
+                  : isEnrolled
+                  ? "See Course"
+                  : "Enroll"}
+              </button>
+            )}
           </div>
         </div>
 
@@ -199,7 +232,7 @@ export default function ViewCourses() {
               Other Published Courses by the Same Educator
             </p>
             <div className="flex flex-wrap gap-6">
-              {otherCourses.map(course => (
+              {otherCourses.map((course) => (
                 <Card
                   key={course._id}
                   id={course._id}
@@ -212,8 +245,7 @@ export default function ViewCourses() {
             </div>
           </div>
         )}
-
       </div>
     </div>
-  )
+  );
 }

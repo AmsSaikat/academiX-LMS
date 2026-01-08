@@ -5,6 +5,7 @@ import HeroLogos from "../components/HeroLogos";
 import ExploreCourses from "./ExploreCourses";
 import CardPage from "../components/CardPage";
 import { useNavigate } from "react-router-dom";
+import About from "../components/About";
 
 export default function Home() {
   const { userData: user } = useSelector((state) => state.user);
@@ -113,6 +114,8 @@ export default function Home() {
             </div>
           </>
         )}
+
+        <About />
       </div>
     </>
   );

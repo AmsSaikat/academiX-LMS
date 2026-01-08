@@ -43,9 +43,15 @@ const courseSchema = new mongoose.Schema({
     default: false
   },
   // ✅ A course can have many reviews
-  reviews: [
-    { type: mongoose.Schema.Types.ObjectId, ref: "Review" }
-  ]
+  averageRating: {
+  type: Number,
+  default: 0,
+},
+numReviews: {
+  type: Number,
+  default: 0,
+},
+
 }, { timestamps: true })
 
 const Course = mongoose.model("Course", courseSchema)
