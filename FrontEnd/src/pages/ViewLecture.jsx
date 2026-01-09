@@ -42,7 +42,7 @@ export default function ViewLecture({ currentUser }) {
       if (!course) return;
       try {
         setLoadingReviews(true);
-        const res = await axios.get(`${serverUrl}/api/review/getcourse/${course._id}`, {
+        const res = await axios.get(`${serverUrl}/api/review/course/${course._id}`, {
           withCredentials: true,
         });
         const sorted = (res.data?.reviews || []).sort((a, b) => b.stars - a.stars);

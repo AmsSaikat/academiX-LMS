@@ -11,7 +11,8 @@ export default function ViewCourses() {
   const navigate = useNavigate();
   const { courseId } = useParams();
 
-  const currentUser = useSelector((state) => state.user);
+  // ✅ unwrap real user object
+  const currentUser = useSelector((state) => state.user?.userData);
 
   const [course, setCourse] = useState(null);
   const [creator, setCreator] = useState(null);
@@ -25,15 +26,17 @@ export default function ViewCourses() {
   useEffect(() => {
     const fetchCourse = async () => {
       try {
-        const res = await axios.get(`${serverUrl}/api/course/getcourse/${courseId}`, {
-          withCredentials: true,
-        });
+        const res = await axios.get(
+          `${serverUrl}/api/course/getcourse/${courseId}`,
+          { withCredentials: true }
+        );
+
         setCourse(res.data);
 
-        // ✅ Check enrollment for students
+        // ✅ Persist enrollment state (future visits)
         if (
           currentUser?.role === "student" &&
-          res.data.enrolledStudents.includes(currentUser._id)
+          res.data.enrolledStudents?.includes(currentUser._id)
         ) {
           setIsEnrolled(true);
         } else {
@@ -43,6 +46,7 @@ export default function ViewCourses() {
         console.error("Error fetching course:", err);
       }
     };
+
     fetchCourse();
   }, [courseId, currentUser]);
 
@@ -52,6 +56,7 @@ export default function ViewCourses() {
   useEffect(() => {
     const fetchCreator = async () => {
       if (!course?.creator) return;
+
       try {
         const res = await axios.post(
           `${serverUrl}/api/course/creator`,
@@ -63,30 +68,34 @@ export default function ViewCourses() {
         console.error("Error fetching creator:", err);
       }
     };
+
     fetchCreator();
   }, [course]);
 
   // ===============================
-  // FETCH OTHER COURSES BY CREATOR
+  // FETCH OTHER COURSES
   // ===============================
   useEffect(() => {
     const fetchOtherCourses = async () => {
       if (!creator?._id) return;
+
       try {
-        const res = await axios.get(`${serverUrl}/api/course/getcreator`, {
-          withCredentials: true,
-        });
-        const courses = res.data.filter((c) => c._id !== courseId);
-        setOtherCourses(courses);
+        const res = await axios.get(
+          `${serverUrl}/api/course/getcreator`,
+          { withCredentials: true }
+        );
+
+        setOtherCourses(res.data.filter((c) => c._id !== courseId));
       } catch (err) {
         console.error("Error fetching other courses:", err);
       }
     };
+
     fetchOtherCourses();
   }, [creator, courseId]);
 
   // ===============================
-  // ENROLL HANDLER (students only)
+  // ENROLL (UNLOCK COURSE)
   // ===============================
   const handleEnroll = async () => {
     if (!currentUser) {
@@ -94,6 +103,7 @@ export default function ViewCourses() {
       return;
     }
 
+    // already unlocked → go directly
     if (isEnrolled) {
       navigate(`/viewlecture/${course._id}`);
       return;
@@ -101,6 +111,7 @@ export default function ViewCourses() {
 
     try {
       setLoadingEnroll(true);
+
       const res = await axios.post(
         `${serverUrl}/api/course/enroll/${course._id}`,
         {},
@@ -112,9 +123,7 @@ export default function ViewCourses() {
         navigate(`/viewlecture/${course._id}`);
       }
     } catch (err) {
-      console.error(err.response?.data || err);
-
-      // ✅ Graceful fallback if backend says "Already enrolled"
+      // graceful fallback
       if (err.response?.data?.message === "Already enrolled") {
         setIsEnrolled(true);
         navigate(`/viewlecture/${course._id}`);
@@ -128,17 +137,24 @@ export default function ViewCourses() {
 
   if (!course) return <div className="p-6">Loading course...</div>;
 
+  // ===============================
+  // ACCESS LOGIC
+  // ===============================
+  const isTeacher = currentUser?.role === "teacher";
+  const isCreator =
+    isTeacher && String(course.creator) === String(currentUser?._id);
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-6xl mx-auto bg-white shadow-md rounded-xl p-6 space-y-6 relative">
+      <div className="max-w-6xl mx-auto bg-white shadow-md rounded-xl p-6 space-y-6">
 
-        {/* BACK BUTTON */}
+        {/* BACK */}
         <FaArrowLeftLong
-          className="absolute top-3 left-4 w-6 h-6 cursor-pointer"
+          className="w-6 h-6 cursor-pointer mb-3"
           onClick={() => navigate("/all-courses")}
         />
 
-        {/* COURSE HEADER */}
+        {/* HEADER */}
         <div className="flex flex-col md:flex-row gap-6">
           <div className="w-full md:w-1/2">
             {course.thumbnail ? (
@@ -156,26 +172,26 @@ export default function ViewCourses() {
             <h2 className="text-2xl font-bold">{course.title}</h2>
             <p className="text-gray-600">{course.subTitle}</p>
 
-            <div className="flex flex-col gap-1">
-              <div className="flex gap-2 text-yellow-500 font-medium">
-                <FaStar /> 5
-                <span className="text-gray-400">(1,200 Reviews)</span>
-              </div>
+            <div className="flex gap-2 text-yellow-500 font-medium">
+              <FaStar /> 5
+              <span className="text-gray-400">(1,200 Reviews)</span>
+            </div>
 
-              <div>
-                <span className="text-xl font-semibold">${course.price}</span>
-                <span className="line-through text-sm text-gray-400 ml-2">$599</span>
-              </div>
+            <div>
+              <span className="text-xl font-semibold">${course.price}</span>
+              <span className="line-through text-sm text-gray-400 ml-2">$599</span>
             </div>
 
             <ul className="text-sm text-gray-700 space-y-1 pt-2">
               <li>✅ {course.lectures?.length || 0} Lectures</li>
-              <li>✅ Lifetime access to course materials</li>
+              <li>✅ Lifetime access</li>
             </ul>
 
-            {/* ✅ Role-based Button */}
-            {currentUser?.role === "teacher" ? (
-              course.creator === currentUser._id ? (
+            {/* ===============================
+                ROLE-BASED ACTION BUTTON
+            =============================== */}
+            {isTeacher ? (
+              isCreator ? (
                 <button
                   onClick={() => navigate(`/viewlecture/${course._id}`)}
                   className="px-6 py-2 rounded text-white bg-black hover:bg-gray-800"
@@ -198,7 +214,7 @@ export default function ViewCourses() {
                 }`}
               >
                 {loadingEnroll
-                  ? "Enrolling..."
+                  ? "Unlocking..."
                   : isEnrolled
                   ? "See Course"
                   : "Enroll"}
@@ -207,7 +223,7 @@ export default function ViewCourses() {
           </div>
         </div>
 
-        {/* CREATOR INFO */}
+        {/* CREATOR */}
         {creator && (
           <div className="flex items-center gap-4 pt-4 border-t">
             {creator.photoUrl && (
@@ -229,17 +245,17 @@ export default function ViewCourses() {
         {otherCourses.length > 0 && (
           <div>
             <p className="text-xl font-semibold mb-3">
-              Other Published Courses by the Same Educator
+              Other Courses by this Educator
             </p>
             <div className="flex flex-wrap gap-6">
-              {otherCourses.map((course) => (
+              {otherCourses.map((c) => (
                 <Card
-                  key={course._id}
-                  id={course._id}
-                  thumbnail={course.thumbnail}
-                  price={course.price}
-                  title={course.title}
-                  category={course.category}
+                  key={c._id}
+                  id={c._id}
+                  thumbnail={c.thumbnail}
+                  price={c.price}
+                  title={c.title}
+                  category={c.category}
                 />
               ))}
             </div>
